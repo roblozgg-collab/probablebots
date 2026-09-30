@@ -1,0 +1,18 @@
+[
+  "tests/test_admin.py::test_admin_balance_is_journaled",
+  "tests/test_admin.py::test_admin_settings_and_blocking",
+  "tests/test_admin.py::test_admin_stats_edit",
+  "tests/test_bonus.py::test_bonus_claim_is_direct_and_cooldown_is_enforced",
+  "tests/test_bonus.py::test_bonus_event_is_idempotent",
+  "tests/test_economy.py::test_transfer_guards",
+  "tests/test_economy.py::test_transfer_is_atomic_and_idempotent",
+  "tests/test_payments.py::test_payment_rejects_wrong_amount",
+  "tests/test_payments.py::test_stars_order_validates_and_settles_once",
+  "tests/test_permissions.py::test_clan_roles_enforced",
+  "tests/test_recovery.py::test_overdue_round_recovery_settles_only_once",
+  "tests/test_roulette.py::test_parser_supports_range_and_aliases",
+  "tests/test_roulette.py::test_recent_results_are_per_chat_and_newest_first",
+  "tests/test_roulette.py::test_standard_payouts",
+  "tests/test_tournament_once.py::test_tournament_award_once",
+  "tests/test_treasury.py::test_invite_reward_once_and_balance"
+]
