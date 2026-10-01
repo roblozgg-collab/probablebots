@@ -41,6 +41,16 @@ class Config:
     joker_payout_multiplier: float = 2.85
     joker_min_bet: int = 1
 
+    blackjack_min_bet: int = 1
+    blackjack_win_multiplier: float = 1.5
+    blackjack_natural_multiplier: float = 2.0
+    blackjack_player_stand: int = 17
+    blackjack_dealer_stand: int = 17
+
+    dice_min_bet: int = 1
+    dice_payout_multiplier: float = 2.0
+    dice_animation_seconds: float = 3.2
+
     duel_reward: int = 250
     duel_cooldown_seconds: int = 300
 
@@ -124,6 +134,14 @@ def load_config() -> Config:
         joker_slots=int(os.getenv("JOKER_SLOTS", "3")),
         joker_payout_multiplier=float(os.getenv("JOKER_PAYOUT_MULTIPLIER", "2.85")),
         joker_min_bet=int(os.getenv("JOKER_MIN_BET", "1")),
+        blackjack_min_bet=int(os.getenv("BLACKJACK_MIN_BET", "1")),
+        blackjack_win_multiplier=float(os.getenv("BLACKJACK_WIN_MULTIPLIER", "1.5")),
+        blackjack_natural_multiplier=float(os.getenv("BLACKJACK_NATURAL_MULTIPLIER", "2.0")),
+        blackjack_player_stand=int(os.getenv("BLACKJACK_PLAYER_STAND", "17")),
+        blackjack_dealer_stand=int(os.getenv("BLACKJACK_DEALER_STAND", "17")),
+        dice_min_bet=int(os.getenv("DICE_MIN_BET", "1")),
+        dice_payout_multiplier=float(os.getenv("DICE_PAYOUT_MULTIPLIER", "2.0")),
+        dice_animation_seconds=float(os.getenv("DICE_ANIMATION_SECONDS", "3.2")),
         duel_reward=int(os.getenv("DUEL_REWARD", "250")),
         duel_cooldown_seconds=int(os.getenv("DUEL_COOLDOWN_SECONDS", "300")),
         clan_create_cost=int(os.getenv("CLAN_CREATE_COST", "50000")),
