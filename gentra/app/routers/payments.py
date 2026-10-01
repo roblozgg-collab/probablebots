@@ -10,6 +10,7 @@ from app.i18n import all_texts, t
 from app.keyboards import donate_keyboard
 from app.routers.common import lang_for_callback, lang_for_message
 from app.services.payments import PaymentDuplicate, PaymentInvalid, PaymentService
+from app.users import display_user
 
 router = Router(name="payments")
 
@@ -80,4 +81,4 @@ async def successful_payment(message: Message, db: Database, payments: PaymentSe
 @router.message(Command("support_payments"))
 async def payment_support(message: Message, db: Database, config: Config):
     lang = lang_for_message(message, db)
-    await message.answer(t(lang, "payment_support", contact=config.support_contact, user_id=message.from_user.id))
+    await message.answer(t(lang, "payment_support", contact=config.support_contact, user=display_user(db, message.from_user.id)))
