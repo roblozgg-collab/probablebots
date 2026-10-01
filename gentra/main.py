@@ -14,8 +14,10 @@ from app.db import Database
 from app.middleware import BlockedAccessMiddleware, RateLimitMiddleware, UserContextMiddleware
 from app.routers import admin, bonus, clans, common, games, groups, payments, tournaments
 from app.scheduler import scheduler_loop
+from app.services.blackjack import BlackjackService
 from app.services.bonus import BonusService
 from app.services.clans import ClanService
+from app.services.dice import DiceService
 from app.services.duels import DuelService
 from app.services.economy import EconomyService
 from app.services.joker import JokerService
@@ -36,6 +38,9 @@ async def main() -> None:
     db.init()
 
     economy = EconomyService(db, config)
+    blackjack = BlackjackService(db, config, economy)
+    dice = DiceService(db, config, economy)
+    dice.refund_pending()
     roulette = RouletteService(db, config, economy)
     mines = MinesService(db, config, economy)
     joker = JokerService(db, config, economy)
@@ -73,6 +78,8 @@ async def main() -> None:
         "db": db,
         "config": config,
         "economy": economy,
+        "blackjack": blackjack,
+        "dice": dice,
         "roulette": roulette,
         "mines": mines,
         "joker": joker,
