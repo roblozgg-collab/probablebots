@@ -111,9 +111,13 @@ Commands and text aliases:
 - `б`, `баланс`, `b`, `balance`, `/balance`
 - reply `п 100` / `p 100`
 - `п ID 100` / `p ID 100`
-- `/profile` and `/профиль` text form
-- `/history`
-- `/top N`, max 50
+- `/профиль`, `профиль`, `/profile`, `profile`
+- `/история`, `история`, `/history`, `history`
+- `/дуэль`, `дуэль`, `/duel`, `duel`
+- `/top N`, `top N`, `/топ N`, `топ N`, max 50
+- `/lang ru|uk|en` and `lang ru|uk|en`; group changes require a Telegram administrator
+- `казна`, `казна N`, `treasury`, `treasury N`
+- `награда N`, `reward N`; configured range 1,000–2,000 GENTRA and group admin only
 
 Transfers use one SQLite write transaction. Self-transfer, non-positive amount and overdraft are rejected. Each debit/credit uses unique event keys so the same Telegram event cannot debit twice.
 
@@ -293,3 +297,11 @@ The test suite covers:
 - Telegram group invite attribution is limited by what Bot API service messages expose; invite-link joins often cannot be attributed to another inviter safely, and gentra intentionally does not guess.
 - SQLite is appropriate for a local/single-process bot. For very large traffic or multiple bot workers, migrate the repository layer to PostgreSQL and use a distributed lock/job queue.
 - The project does not provide cash withdrawal or conversion of GENTRA/galleons into money or cryptocurrency.
+
+## Blackjack and dice
+
+Player-facing references use `@username` when it is available. If a Telegram account has no username, gentra shows the saved first name instead of exposing the numeric Telegram ID. Transfers also accept `п @username сумма` / `p @username amount` in addition to reply transfers and numeric IDs.
+
+Blackjack commands do not require punctuation: `бд 100`, `блекджек 100`, `bj 100`, `blackjack 100`. The game is automatic: both sides receive cards, the player and dealer draw to the configured stand values, and the result is settled in one database transaction. Default total payouts are x1 on a push, x1.5 on a normal win and x2 on a natural blackjack.
+
+Dice uses Telegram's native animated 🎲. `кб 100` / `kb 100` bets on 4–6, while `км 100` / `km 100` bets on 1–3. `куб больше 100`, `куб меньше 100`, `dice high 100` and `dice low 100` are also accepted. The bet is debited before the roll and the result is settled once after the Telegram dice value is returned. The default total win payout is x2.
