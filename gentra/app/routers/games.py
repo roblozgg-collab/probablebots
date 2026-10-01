@@ -12,9 +12,9 @@ from app.command_aliases import is_duel_text_value
 
 from app.db import Database
 from app.i18n import t
-from app.keyboards import duel_keyboard, joker_keyboard, mines_keyboard
+from app.keyboards import blackjack_keyboard, duel_keyboard, joker_keyboard, mines_keyboard
 from app.routers.common import lang_for_callback, lang_for_message
-from app.services.blackjack import BlackjackService
+from app.services.blackjack import BlackjackFinished, BlackjackNotFound, BlackjackNotYours, BlackjackService
 from app.services.dice import DiceGameFinished, DiceService
 from app.services.duels import (
     DuelCooldown,
@@ -181,12 +181,41 @@ def format_cards(cards: list[str]) -> str:
     return " • ".join(f"{suits.get(card[-1], card[-1])}{card[:-1]}" for card in cards)
 
 
+def blackjack_text(lang: str, db: Database, row: dict) -> str:
+    user = display_user(db, int(row["user_id"]))
+    if row["status"] == "active":
+        dealer_visible = row["dealer"][:1]
+        dealer_value = BlackjackService.hand_value(dealer_visible)
+        return t(
+            lang,
+            "blackjack_active",
+            bet=row["bet"],
+            dealer_cards=f"{format_cards(dealer_visible)} • 🂠 ?",
+            dealer_value=dealer_value,
+            user=user,
+            player_cards=format_cards(row["player"]),
+            player_value=row["player_value"],
+        )
+    outcome = t(lang, f"blackjack_{row['result']}", payout=row["payout"])
+    return t(
+        lang,
+        "blackjack_result",
+        bet=row["bet"],
+        dealer_cards=format_cards(row["dealer"]),
+        dealer_value=row["dealer_value"],
+        user=user,
+        player_cards=format_cards(row["player"]),
+        player_value=row["player_value"],
+        outcome=outcome,
+    )
+
+
 @router.message(lambda m: parse_blackjack_amount(m.text) is not None)
 async def blackjack_play(message: Message, db: Database, blackjack: BlackjackService):
     lang = lang_for_message(message, db)
     bet = parse_blackjack_amount(message.text)
     try:
-        result = blackjack.play(
+        result = blackjack.start(
             message.from_user.id,
             message.chat.id,
             bet,
@@ -198,21 +227,37 @@ async def blackjack_play(message: Message, db: Database, blackjack: BlackjackSer
         await message.answer(t(lang, "not_enough")); return
     except DuplicateEvent:
         return
-    outcome = t(lang, f"blackjack_{result['result']}", payout=result["payout"])
-    user = display_user(db, message.from_user.id)
-    await message.answer(
-        t(
-            lang,
-            "blackjack_result",
-            bet=result["bet"],
-            dealer_cards=format_cards(result["dealer"]),
-            dealer_value=result["dealer_value"],
-            user=user,
-            player_cards=format_cards(result["player"]),
-            player_value=result["player_value"],
-            outcome=outcome,
-        )
-    )
+    markup = blackjack_keyboard(result["game_id"], lang) if result["status"] == "active" else None
+    await message.answer(blackjack_text(lang, db, result), reply_markup=markup)
+
+
+@router.callback_query(F.data.startswith("blackjack:hit:"))
+async def blackjack_hit(call: CallbackQuery, db: Database, blackjack: BlackjackService):
+    lang = lang_for_callback(call, db)
+    game_id = call.data.rsplit(":", 1)[1]
+    try:
+        result = blackjack.hit(game_id, call.from_user.id, f"cb:{call.id}:blackjack:hit")
+    except BlackjackNotYours:
+        await call.answer(t(lang, "game_not_yours"), show_alert=True); return
+    except (BlackjackNotFound, BlackjackFinished, DuplicateEvent):
+        await call.answer(t(lang, "game_finished"), show_alert=True); return
+    markup = blackjack_keyboard(game_id, lang) if result["status"] == "active" else None
+    await call.message.edit_text(blackjack_text(lang, db, result), reply_markup=markup)
+    await call.answer()
+
+
+@router.callback_query(F.data.startswith("blackjack:stand:"))
+async def blackjack_stand(call: CallbackQuery, db: Database, blackjack: BlackjackService):
+    lang = lang_for_callback(call, db)
+    game_id = call.data.rsplit(":", 1)[1]
+    try:
+        result = blackjack.stand(game_id, call.from_user.id, f"cb:{call.id}:blackjack:stand")
+    except BlackjackNotYours:
+        await call.answer(t(lang, "game_not_yours"), show_alert=True); return
+    except (BlackjackNotFound, BlackjackFinished, DuplicateEvent):
+        await call.answer(t(lang, "game_finished"), show_alert=True); return
+    await call.message.edit_text(blackjack_text(lang, db, result))
+    await call.answer()
 
 
 def parse_dice_command(text: str | None):
@@ -307,6 +352,10 @@ def is_roulette_log(message: Message) -> bool:
     return (message.text or "").strip().lower() in {"лог", "log", "/лог"}
 
 
+def is_roulette_go(message: Message) -> bool:
+    return (message.text or "").strip().lower() in {"го", "go", "/го"}
+
+
 @router.message(Command("log"))
 @router.message(lambda m: is_roulette_log(m))
 async def roulette_log(message: Message, db: Database, roulette: RouletteService):
@@ -318,6 +367,30 @@ async def roulette_log(message: Message, db: Database, roulette: RouletteService
     symbols = {"red": "🔴", "black": "⚫", "green": "🟢"}
     rows = "\n".join(f"{number} {symbols[color_of(number)]}" for number in numbers)
     await message.answer(t(lang, "roulette_log", count=len(numbers), rows=rows))
+
+
+@router.message(Command("go"))
+@router.message(lambda m: is_roulette_go(m))
+async def roulette_go(message: Message, db: Database, roulette: RouletteService):
+    lang = lang_for_message(message, db)
+    try:
+        round_id = roulette.force_close(message.chat.id)
+    except NoBets:
+        await message.answer(t(lang, "roulette_go_no_bets")); return
+    result = roulette.settle_round(round_id)
+    if not result:
+        return
+    await message.answer(
+        t(
+            lang,
+            "roulette_result",
+            round_id=result["round_id"],
+            number=result["number"],
+            color=t(lang, f"color_{result['color']}"),
+            bets=result["bets"],
+            payout=result["payout"],
+        )
+    )
 
 
 @router.message(lambda m: roulette_action(m) is not None)
