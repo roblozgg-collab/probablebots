@@ -74,6 +74,13 @@ def joker_keyboard(game_row) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[buttons])
 
 
+def blackjack_keyboard(game_id: str, lang: str = "ru") -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(inline_keyboard=[[
+        InlineKeyboardButton(text=t(lang, "blackjack_hit_button"), callback_data=f"blackjack:hit:{game_id}"),
+        InlineKeyboardButton(text=t(lang, "blackjack_stand_button"), callback_data=f"blackjack:stand:{game_id}"),
+    ]])
+
+
 def clan_menu_keyboard(lang: str) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text=t(lang, "clan_my_button"), callback_data="clan:mine")],
