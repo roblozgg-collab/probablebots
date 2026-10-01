@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta
+import html
 from zoneinfo import ZoneInfo
 
 from aiogram import F, Router
@@ -12,6 +13,7 @@ from app.i18n import all_texts, t
 from app.keyboards import tournament_keyboard
 from app.routers.common import lang_for_callback, lang_for_message
 from app.services.tournaments import KYIV, TournamentService
+from app.users import display_user
 
 router = Router(name="tournaments")
 
@@ -28,16 +30,13 @@ async def tournament_menu(message: Message, db: Database):
 
 
 def _subject_name(db: Database, tournament_type: str, subject_id: int) -> str:
+    if tournament_type == "players":
+        return display_user(db, subject_id)
     with db.connect() as con:
-        if tournament_type == "players":
-            row = con.execute("SELECT username,first_name FROM users WHERE user_id=?", (subject_id,)).fetchone()
-            if row:
-                return f"@{row['username']}" if row["username"] else (row["first_name"] or str(subject_id))
-        else:
-            row = con.execute("SELECT title FROM group_settings WHERE chat_id=?", (subject_id,)).fetchone()
-            if row and row["title"]:
-                return row["title"]
-    return str(subject_id)
+        row = con.execute("SELECT title FROM group_settings WHERE chat_id=?", (subject_id,)).fetchone()
+        if row and row["title"]:
+            return html.escape(row["title"])
+    return "чат"
 
 
 @router.callback_query(F.data.startswith("tour:"))
