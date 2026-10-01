@@ -161,6 +161,14 @@ CREATE TABLE IF NOT EXISTS blackjack_games (
 );
 CREATE INDEX IF NOT EXISTS idx_blackjack_user ON blackjack_games(user_id, created_at DESC);
 
+CREATE TABLE IF NOT EXISTS blackjack_state (
+    game_id TEXT PRIMARY KEY,
+    deck_json TEXT NOT NULL,
+    status TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    FOREIGN KEY(game_id) REFERENCES blackjack_games(game_id) ON DELETE CASCADE
+);
+
 CREATE TABLE IF NOT EXISTS dice_games (
     game_id TEXT PRIMARY KEY,
     start_event_key TEXT NOT NULL UNIQUE,
