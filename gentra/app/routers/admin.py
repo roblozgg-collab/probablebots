@@ -12,6 +12,7 @@ from aiogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMar
 from app.config import Config
 from app.db import Database
 from app.services.economy import DuplicateEvent, EconomyService, InsufficientFunds
+from app.users import display_user
 
 router = Router(name="admin")
 
@@ -117,11 +118,21 @@ def info_keyboard(db: Database, config: Config) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
 
+
+
+def resolve_user_ref(db: Database, value: str):
+    raw = value.strip()
+    if raw.lstrip("-").isdigit():
+        row = db.get_user(int(raw))
+        return int(row["user_id"]) if row else None
+    row = db.get_user_by_username(raw)
+    return int(row["user_id"]) if row else None
+
 def user_text(db: Database, user_id: int) -> str:
     row = db.get_user(user_id)
     if not row:
         return "👤 Пользователь не найден."
-    name = f"@{row['username']}" if row["username"] else row["first_name"] or "—"
+    name = display_user(db, user_id)
     stats = sum(int(row[key]) for key in STAT_LABELS)
     clan = "Нет"
     if row["clan_id"]:
@@ -133,8 +144,7 @@ def user_text(db: Database, user_id: int) -> str:
     vip = row["vip_until"] or "Нет"
     return (
         "👤 <b>Пользователь</b>\n\n"
-        f"ID: <code>{user_id}</code>\n"
-        f"Имя: {name}\n"
+        f"Пользователь: <b>{name}</b>\n"
         f"💰 GENTRA: <b>{int(row['gentra']):,}</b>\n"
         f"🪙 Галеоны: <b>{int(row['galleons']):,}</b>\n"
         f"📊 Характеристики: <b>{stats}</b>\n"
@@ -267,7 +277,7 @@ async def users_start(call: CallbackQuery, config: Config, state: FSMContext):
         return
     await state.set_state(AdminStates.user_search)
     await call.message.edit_text(
-        "👥 <b>ПОЛЬЗОВАТЕЛИ</b>\n\nОтправьте Telegram ID пользователя.\nПосле поиска можно изменить GENTRA, галеоны, характеристики и доступ к боту.",
+        "👥 <b>ПОЛЬЗОВАТЕЛИ</b>\n\nОтправьте @username пользователя или Telegram ID.\nПосле поиска можно изменить GENTRA, галеоны, характеристики и доступ к боту.",
         reply_markup=cancel_menu(),
     )
     await call.answer()
@@ -277,15 +287,11 @@ async def users_start(call: CallbackQuery, config: Config, state: FSMContext):
 async def users_search(message: Message, db: Database, config: Config, state: FSMContext):
     if await reject_message(message, config):
         return
-    try:
-        user_id = int((message.text or "").strip())
-    except ValueError:
-        await message.answer("Введите числовой Telegram ID.")
+    user_id = resolve_user_ref(db, message.text or "")
+    if user_id is None:
+        await message.answer("❌ Пользователь не найден. Отправьте @username или Telegram ID.")
         return
     row = db.get_user(user_id)
-    if not row:
-        await message.answer("❌ Пользователь с таким ID ещё не зарегистрирован в боте.")
-        return
     await state.clear()
     await message.answer(user_text(db, user_id), reply_markup=user_keyboard(user_id, db.is_blocked(user_id)))
 
@@ -317,7 +323,7 @@ async def user_field(call: CallbackQuery, db: Database, config: Config, state: F
     await state.update_data(target_user_id=user_id, field=field)
     label = "GENTRA" if field == "gentra" else "галеонов"
     await call.message.edit_text(
-        f"✏️ <b>Изменение {label}</b>\n\nПользователь: <code>{user_id}</code>\nТекущее значение: <b>{int(row[field]):,}</b>\n\nОтправьте новое точное значение от 0 и выше.",
+        f"✏️ <b>Изменение {label}</b>\n\nПользователь: <b>{display_user(db, user_id)}</b>\nТекущее значение: <b>{int(row[field]):,}</b>\n\nОтправьте новое точное значение от 0 и выше.",
         reply_markup=cancel_menu(),
     )
     await call.answer()
@@ -370,7 +376,7 @@ async def stats_open(call: CallbackQuery, db: Database, config: Config, state: F
         await call.answer("Пользователь не найден.", show_alert=True)
         return
     await call.message.edit_text(
-        f"📊 <b>Характеристики</b>\nПользователь: <code>{user_id}</code>\n\nНажмите характеристику для изменения:",
+        f"📊 <b>Характеристики</b>\nПользователь: <b>{display_user(db, user_id)}</b>\n\nНажмите характеристику для изменения:",
         reply_markup=stats_keyboard(user_id, row),
     )
     await call.answer()
@@ -389,7 +395,7 @@ async def stat_edit(call: CallbackQuery, db: Database, config: Config, state: FS
     await state.set_state(AdminStates.stat_value)
     await state.update_data(target_user_id=user_id, stat=stat)
     await call.message.edit_text(
-        f"📊 <b>{STAT_LABELS[stat]}</b>\nПользователь: <code>{user_id}</code>\nТекущее значение: <b>{int(row[stat])}</b>\n\nОтправьте новое значение:",
+        f"📊 <b>{STAT_LABELS[stat]}</b>\nПользователь: <b>{display_user(db, user_id)}</b>\nТекущее значение: <b>{int(row[stat])}</b>\n\nОтправьте новое значение:",
         reply_markup=cancel_menu(),
     )
     await call.answer()
@@ -475,7 +481,7 @@ async def block_start(call: CallbackQuery, db: Database, config: Config, state: 
         return
     await state.set_state(AdminStates.block_search)
     await call.message.edit_text(
-        "🚫 <b>ЗАБЛОКИРОВАТЬ</b>\n\nОтправьте Telegram ID пользователя.\n\nБлокировка полностью отключает команды, игры и inline-кнопки пользователя как в личных сообщениях, так и в группах.",
+        "🚫 <b>ЗАБЛОКИРОВАТЬ</b>\n\nОтправьте @username пользователя или Telegram ID.\n\nБлокировка полностью отключает команды, игры и inline-кнопки пользователя как в личных сообщениях, так и в группах.",
         reply_markup=cancel_menu(),
     )
     await call.answer()
@@ -485,16 +491,12 @@ async def block_start(call: CallbackQuery, db: Database, config: Config, state: 
 async def block_search(message: Message, db: Database, config: Config, state: FSMContext):
     if await reject_message(message, config):
         return
-    try:
-        user_id = int((message.text or "").strip())
-    except ValueError:
-        await message.answer("Введите числовой Telegram ID.")
+    user_id = resolve_user_ref(db, message.text or "")
+    if user_id is None:
+        await message.answer("❌ Пользователь не найден. Отправьте @username или Telegram ID.")
         return
     if user_id in set(config.admin_ids):
         await message.answer("⛔ Администратора нельзя заблокировать.")
-        return
-    if not db.get_user(user_id):
-        await message.answer("❌ Пользователь с таким ID ещё не зарегистрирован в боте.")
         return
     await state.clear()
     blocked = db.is_blocked(user_id)
