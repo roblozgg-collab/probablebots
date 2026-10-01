@@ -295,6 +295,27 @@ class RouletteService:
                 raise DuplicateEvent(event_key) from exc
             raise
 
+    def force_close(self, chat_id: int) -> int:
+        now = datetime.now(timezone.utc).isoformat(timespec="seconds")
+        with self.db.transaction() as con:
+            rr = con.execute(
+                "SELECT * FROM roulette_rounds WHERE chat_id=? AND status='open' ORDER BY id DESC LIMIT 1",
+                (chat_id,),
+            ).fetchone()
+            if not rr:
+                raise NoBets()
+            active = con.execute(
+                "SELECT COUNT(*) FROM roulette_bets WHERE round_id=? AND status='active'",
+                (rr["id"],),
+            ).fetchone()[0]
+            if not active:
+                raise NoBets()
+            con.execute(
+                "UPDATE roulette_rounds SET status='closing',closes_at=? WHERE id=? AND status='open'",
+                (now, rr["id"]),
+            )
+            return int(rr["id"])
+
     def due_rounds(self):
         now = datetime.now(timezone.utc).isoformat(timespec="seconds")
         with self.db.connect() as con:
