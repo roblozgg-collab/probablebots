@@ -261,7 +261,65 @@ EXTRA_TEXTS = {
         "color_green": "green",
     },
 }
+UI_TEXTS = {
+    "ru": {
+        "profile_text": "👤 <b>Профиль gentra</b>\nПользователь: <b>{user}</b>\nGENTRA: <b>{gentra:,}</b>\nГалеоны: <b>{galleons:,}</b>\nСумма характеристик: <b>{stats}</b>\nКлан: <b>{clan}</b>{vip}",
+        "transfer_ok": "✅ Переведено <b>{amount:,} GENTRA</b> игроку <b>{target}</b>.",
+        "games_help": "🎮 <b>Игры gentra</b>\n\n🎲 <code>кб 100</code> — кубик больше (4–6)\n🎲 <code>км 100</code> — кубик меньше (1–3)\n🂡 <code>бд 100</code> — блэкджек\n💣 <code>мины 100</code> — минное поле\n🃏 <code>джокер 100</code> — джокер\n\n🎰 <code>100 красное</code> — рулетка, ставка на красное\n🎰 <code>100 чёрное</code> — рулетка, ставка на чёрное\n🎰 <code>100 17</code> — рулетка, ставка на число\n🎰 <code>100 1-12</code> — рулетка, ставка на диапазон\n🎰 <code>100 odd</code> — рулетка, нечётное\n🎰 <code>100 even</code> — рулетка, чётное\n📜 <code>лог</code> — последние результаты рулетки\n\n⚔️ <code>дуэль</code> — вызвать игрока ответом на сообщение.",
+        "commands_text": "📋 <b>Команды</b>\n\nб или баланс — проверка вашего баланса 💰\nп сумма — перевод монет ответом на сообщение пользователя\nп ID сумма — перевод монет через ID пользователя\n/профиль — просмотр вашего профиля\n/история — просмотр истории переводов и дуэлей\n/дуэль — подбор соперника в чате; ответьте «дуэль» на сообщение участника для вызова ⚔️\n/top n — топ пользователей по балансу, максимум 50\n\n🌐 <b>Язык группы</b>\n/lang uk — украинский\n/lang ru — русский\n/lang en — английский\n\n🏦 <b>Казна</b>\nказна — подключение и просмотр баланса\nказна n — пополнение казны на n GENTRA\nнаграда n — награда за приглашение, от 1000 до 2000 GENTRA; настраивает администратор\n\n🎮 <b>Игры</b>\nкб 100 — кубик больше (4–6)\nкм 100 — кубик меньше (1–3)\nбд 100 — блэкджек\nмины 100 — минное поле\nджокер 100 — джокер\nлог — последние результаты рулетки",
+        "blackjack_result": "🂡 <b>Блэкджек</b>\nИгра завершена.\n\nСтавка: <b>{bet:,} GENTRA</b>\n\nКарты дилера:\n{dealer_cards}\nЗначение: <b>{dealer_value}</b>\n\n{user} — Значение: <b>{player_value}</b>\n{player_cards}\n\n{outcome}",
+        "blackjack_blackjack": "✨ <b>Блэкджек! Выигрыш {payout:,} GENTRA</b>",
+        "blackjack_win": "✅ <b>Вы выиграли {payout:,} GENTRA</b>",
+        "blackjack_push": "🤝 <b>Ничья. Ставка возвращена: {payout:,} GENTRA</b>",
+        "blackjack_lose": "❌ <b>Вы проиграли</b>",
+        "dice_high": "больше 4–6",
+        "dice_low": "меньше 1–3",
+        "dice_result": "🎲 <b>Куб gentra</b>\nИгрок: <b>{user}</b>\nСтавка: <b>{bet:,} GENTRA</b>\nВыбор: <b>{choice}</b>\nВыпало: <b>{value}</b>\n\n{outcome}",
+        "dice_win": "✅ Вы выиграли <b>{payout:,} GENTRA</b>",
+        "dice_lose": "❌ Вы проиграли",
+        "payment_support": "💬 По вопросам платежей: {contact}\nВаш профиль: <b>{user}</b>.",
+        "clan_card": "🏰 <b>{name}</b>\nВладелец: <b>{owner}</b>\nЗаместитель: <b>{deputy}</b>\nКазна: <b>{treasury:,}</b> GENTRA\nУчастники: <b>{members}/{limit}</b>",
+    },
+    "uk": {
+        "profile_text": "👤 <b>Профіль gentra</b>\nКористувач: <b>{user}</b>\nGENTRA: <b>{gentra:,}</b>\nГалеони: <b>{galleons:,}</b>\nСума характеристик: <b>{stats}</b>\nКлан: <b>{clan}</b>{vip}",
+        "transfer_ok": "✅ Переказано <b>{amount:,} GENTRA</b> гравцю <b>{target}</b>.",
+        "games_help": "🎮 <b>Ігри gentra</b>\n\n🎲 <code>кб 100</code> — кубик більше (4–6)\n🎲 <code>км 100</code> — кубик менше (1–3)\n🂡 <code>бд 100</code> — блекджек\n💣 <code>міни 100</code> — мінне поле\n🃏 <code>джокер 100</code> — джокер\n\n🎰 <code>100 червоне</code> — рулетка, ставка на червоне\n🎰 <code>100 чорне</code> — рулетка, ставка на чорне\n🎰 <code>100 17</code> — рулетка, ставка на число\n🎰 <code>100 1-12</code> — рулетка, ставка на діапазон\n🎰 <code>100 odd</code> — рулетка, непарне\n🎰 <code>100 even</code> — рулетка, парне\n📜 <code>лог</code> — останні результати рулетки\n\n⚔️ <code>дуель</code> — викликати гравця відповіддю на повідомлення.",
+        "commands_text": "📋 <b>Команди</b>\n\nб або баланс — перевірка балансу 💰\nп сума — переказ відповіддю на повідомлення\nп ID сума — переказ через ID\n/профіль — профіль\n/історія — історія переказів і дуелей\n/дуель — підбір суперника; відповідь «дуель» викликає учасника ⚔️\n/top n — топ за балансом, максимум 50\n\n🌐 <b>Мова групи</b>\n/lang uk\n/lang ru\n/lang en\n\n🏦 <b>Казна</b>\nказна — підключення і баланс\nказна n — поповнення на n GENTRA\nнаграда n — винагорода 1000–2000 GENTRA; налаштовує адміністратор\n\n🎮 <b>Ігри</b>\nкб 100 — кубик більше (4–6)\nкм 100 — кубик менше (1–3)\nбд 100 — блекджек\nміни 100 — мінне поле\nджокер 100 — джокер\nлог — останні результати рулетки",
+        "blackjack_result": "🂡 <b>Блекджек</b>\nГру завершено.\n\nСтавка: <b>{bet:,} GENTRA</b>\n\nКарти дилера:\n{dealer_cards}\nЗначення: <b>{dealer_value}</b>\n\n{user} — Значення: <b>{player_value}</b>\n{player_cards}\n\n{outcome}",
+        "blackjack_blackjack": "✨ <b>Блекджек! Виграш {payout:,} GENTRA</b>",
+        "blackjack_win": "✅ <b>Ви виграли {payout:,} GENTRA</b>",
+        "blackjack_push": "🤝 <b>Нічия. Ставку повернено: {payout:,} GENTRA</b>",
+        "blackjack_lose": "❌ <b>Ви програли</b>",
+        "dice_high": "більше 4–6",
+        "dice_low": "менше 1–3",
+        "dice_result": "🎲 <b>Куб gentra</b>\nГравець: <b>{user}</b>\nСтавка: <b>{bet:,} GENTRA</b>\nВибір: <b>{choice}</b>\nВипало: <b>{value}</b>\n\n{outcome}",
+        "dice_win": "✅ Ви виграли <b>{payout:,} GENTRA</b>",
+        "dice_lose": "❌ Ви програли",
+        "payment_support": "💬 Питання щодо платежів: {contact}\nВаш профіль: <b>{user}</b>.",
+        "clan_card": "🏰 <b>{name}</b>\nВласник: <b>{owner}</b>\nЗаступник: <b>{deputy}</b>\nКазна: <b>{treasury:,}</b>\nУчасники: <b>{members}/{limit}</b>",
+    },
+    "en": {
+        "profile_text": "👤 <b>gentra profile</b>\nUser: <b>{user}</b>\nGENTRA: <b>{gentra:,}</b>\nGalleons: <b>{galleons:,}</b>\nStats total: <b>{stats}</b>\nClan: <b>{clan}</b>{vip}",
+        "transfer_ok": "✅ Sent <b>{amount:,} GENTRA</b> to <b>{target}</b>.",
+        "games_help": "🎮 <b>gentra games</b>\n\n🎲 <code>kb 100</code> — dice high (4–6)\n🎲 <code>km 100</code> — dice low (1–3)\n🂡 <code>bj 100</code> — blackjack\n💣 <code>mines 100</code> — mines\n🃏 <code>joker 100</code> — joker\n\n🎰 <code>100 red</code> — roulette, bet on red\n🎰 <code>100 black</code> — roulette, bet on black\n🎰 <code>100 17</code> — roulette, bet on a number\n🎰 <code>100 1-12</code> — roulette, bet on a range\n🎰 <code>100 odd</code> — roulette, odd\n🎰 <code>100 even</code> — roulette, even\n📜 <code>log</code> — recent roulette results\n\n⚔️ <code>duel</code> — challenge a player by replying to a message.",
+        "commands_text": "📋 <b>Commands</b>\n\nb / balance — check balance 💰\np amount — transfer by reply\np ID amount — transfer by user ID\n/profile — profile\n/history — transfers and duel history\n/duel — find an opponent; reply with duel to challenge a member ⚔️\n/top n — balance leaderboard, max 50\n\n🌐 <b>Group language</b>\n/lang uk\n/lang ru\n/lang en\n\n🏦 <b>Treasury</b>\ntreasury — connect/show treasury\ntreasury n — deposit n GENTRA\nreward n — invite reward 1000–2000 GENTRA; admin only\n\n🎮 <b>Games</b>\nkb 100 — dice high (4–6)\nkm 100 — dice low (1–3)\nbj 100 — blackjack\nmines 100 — mines\njoker 100 — joker\nlog — recent roulette results",
+        "blackjack_result": "🂡 <b>Blackjack</b>\nGame finished.\n\nBet: <b>{bet:,} GENTRA</b>\n\nDealer cards:\n{dealer_cards}\nValue: <b>{dealer_value}</b>\n\n{user} — Value: <b>{player_value}</b>\n{player_cards}\n\n{outcome}",
+        "blackjack_blackjack": "✨ <b>Blackjack! Payout {payout:,} GENTRA</b>",
+        "blackjack_win": "✅ <b>You won {payout:,} GENTRA</b>",
+        "blackjack_push": "🤝 <b>Push. Bet returned: {payout:,} GENTRA</b>",
+        "blackjack_lose": "❌ <b>You lost</b>",
+        "dice_high": "high 4–6",
+        "dice_low": "low 1–3",
+        "dice_result": "🎲 <b>gentra dice</b>\nPlayer: <b>{user}</b>\nBet: <b>{bet:,} GENTRA</b>\nChoice: <b>{choice}</b>\nRolled: <b>{value}</b>\n\n{outcome}",
+        "dice_win": "✅ You won <b>{payout:,} GENTRA</b>",
+        "dice_lose": "❌ You lost",
+        "payment_support": "💬 Payment support: {contact}\nYour profile: <b>{user}</b>.",
+        "clan_card": "🏰 <b>{name}</b>\nOwner: <b>{owner}</b>\nDeputy: <b>{deputy}</b>\nTreasury: <b>{treasury:,}</b>\nMembers: <b>{members}/{limit}</b>",
+    },
+}
 for _lang, _items in EXTRA_TEXTS.items():
+    TEXTS[_lang].update(_items)
+for _lang, _items in UI_TEXTS.items():
     TEXTS[_lang].update(_items)
 
 def t(lang: str, key: str, **kwargs: Any) -> str:
