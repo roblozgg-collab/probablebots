@@ -1,16 +1,21 @@
 from __future__ import annotations
 
+import asyncio
 import json
 from datetime import datetime, timezone
 
-from aiogram import F, Router
+from aiogram import Bot, F, Router
 from aiogram.filters import Command
 from aiogram.types import CallbackQuery, Message
+
+from app.command_aliases import is_duel_text_value
 
 from app.db import Database
 from app.i18n import t
 from app.keyboards import duel_keyboard, joker_keyboard, mines_keyboard
 from app.routers.common import lang_for_callback, lang_for_message
+from app.services.blackjack import BlackjackService
+from app.services.dice import DiceGameFinished, DiceService
 from app.services.duels import (
     DuelCooldown,
     DuelNotFound,
@@ -30,6 +35,7 @@ from app.services.roulette import (
     color_of,
     parse_bet_target,
 )
+from app.users import display_user
 
 router = Router(name="games")
 
@@ -157,8 +163,132 @@ async def joker_choose(call: CallbackQuery, db: Database, joker: JokerService):
     await call.answer()
 
 
+def parse_blackjack_amount(text: str | None):
+    parts = (text or "").strip().lower().split()
+    if len(parts) != 2:
+        return None
+    command = parts[0].lstrip("/")
+    if command not in {"бд", "блекджек", "blackjack", "bj"}:
+        return None
+    try:
+        return int(parts[1].replace("_", ""))
+    except ValueError:
+        return None
+
+
+def format_cards(cards: list[str]) -> str:
+    suits = {"♥": "♥️", "♦": "♦️", "♣": "♣️", "♠": "♠️"}
+    return " • ".join(f"{suits.get(card[-1], card[-1])}{card[:-1]}" for card in cards)
+
+
+@router.message(lambda m: parse_blackjack_amount(m.text) is not None)
+async def blackjack_play(message: Message, db: Database, blackjack: BlackjackService):
+    lang = lang_for_message(message, db)
+    bet = parse_blackjack_amount(message.text)
+    try:
+        result = blackjack.play(
+            message.from_user.id,
+            message.chat.id,
+            bet,
+            f"msg:{message.chat.id}:{message.message_id}:blackjack",
+        )
+    except InvalidAmount:
+        await message.answer(t(lang, "invalid_amount")); return
+    except InsufficientFunds:
+        await message.answer(t(lang, "not_enough")); return
+    except DuplicateEvent:
+        return
+    outcome = t(lang, f"blackjack_{result['result']}", payout=result["payout"])
+    user = display_user(db, message.from_user.id)
+    await message.answer(
+        t(
+            lang,
+            "blackjack_result",
+            bet=result["bet"],
+            dealer_cards=format_cards(result["dealer"]),
+            dealer_value=result["dealer_value"],
+            user=user,
+            player_cards=format_cards(result["player"]),
+            player_value=result["player_value"],
+            outcome=outcome,
+        )
+    )
+
+
+def parse_dice_command(text: str | None):
+    parts = (text or "").strip().lower().split()
+    if len(parts) == 2:
+        command = parts[0].lstrip("/")
+        choices = {"кб": "high", "kb": "high", "км": "low", "km": "low"}
+        choice = choices.get(command)
+        if not choice:
+            return None
+        amount_text = parts[1]
+    elif len(parts) == 3 and parts[0].lstrip("/") in {"куб", "dice", "кб", "kb"}:
+        mode = parts[1]
+        if mode in {"больше", "більше", "high", "more"}:
+            choice = "high"
+        elif mode in {"меньше", "менше", "low", "less"}:
+            choice = "low"
+        else:
+            return None
+        amount_text = parts[2]
+    else:
+        return None
+    try:
+        return choice, int(amount_text.replace("_", ""))
+    except ValueError:
+        return None
+
+
+@router.message(lambda m: parse_dice_command(m.text) is not None)
+async def dice_play(message: Message, db: Database, dice: DiceService, bot: Bot):
+    lang = lang_for_message(message, db)
+    choice, bet = parse_dice_command(message.text)
+    try:
+        row = dice.start(
+            message.from_user.id,
+            message.chat.id,
+            bet,
+            choice,
+            f"msg:{message.chat.id}:{message.message_id}:dice",
+        )
+    except InvalidAmount:
+        await message.answer(t(lang, "invalid_amount")); return
+    except InsufficientFunds:
+        await message.answer(t(lang, "not_enough")); return
+    except DuplicateEvent:
+        return
+    try:
+        dice_message = await bot.send_dice(chat_id=message.chat.id, emoji="🎲")
+    except Exception:
+        try:
+            dice.cancel(row["game_id"])
+        except Exception:
+            pass
+        await message.answer(t(lang, "generic_error"))
+        return
+    await asyncio.sleep(dice.config.dice_animation_seconds)
+    value = int(dice_message.dice.value)
+    try:
+        win, payout = dice.settle(row["game_id"], value)
+    except DiceGameFinished:
+        return
+    await message.answer(
+        t(
+            lang,
+            "dice_result",
+            user=display_user(db, message.from_user.id),
+            bet=bet,
+            choice=t(lang, "dice_high" if choice == "high" else "dice_low"),
+            value=value,
+            outcome=t(lang, "dice_win", payout=payout) if win else t(lang, "dice_lose"),
+        )
+    )
+
+
 ACTION_ALIASES = {
-    "bets": {"ставки", "ставки!", "bets"},
+    "bets": {"ставки", "bets"},
     "cancel": {"отменить", "скасувати", "cancel"},
     "double": {"удвоить", "подвоїти", "double"},
     "repeat": {"повторить", "повторити", "repeat"},
@@ -250,8 +380,7 @@ async def roulette_bet(message: Message, db: Database, roulette: RouletteService
 
 
 def is_duel_text(message: Message) -> bool:
-    s = (message.text or "").strip().lower()
-    return s in {"дуэль", "дуель", "duel"}
+    return is_duel_text_value(message.text)
 
 
 @router.message(Command("duel"))
@@ -280,15 +409,6 @@ async def duel_start(message: Message, db: Database, duels: DuelService):
         t(lang, "duel_incoming", challenger=a, opponent=b, reward=duels.config.duel_reward),
         reply_markup=duel_keyboard(duel["duel_id"], lang),
     )
-
-
-def display_user(db: Database, user_id: int) -> str:
-    row = db.get_user(user_id)
-    if not row:
-        return f"<code>{user_id}</code>"
-    if row["username"]:
-        return f"@{row['username']}"
-    return row["first_name"] or f"<code>{user_id}</code>"
 
 
 @router.callback_query(F.data.startswith("duel:accept:"))
