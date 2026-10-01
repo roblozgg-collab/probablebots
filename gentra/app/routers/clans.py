@@ -27,17 +27,18 @@ from app.services.clans import (
     ClanService,
 )
 from app.services.economy import InsufficientFunds
+from app.users import display_user
 
 router = Router(name="clans")
 
 
-def card_text(lang: str, row, config: Config) -> str:
-    deputy = f"<code>{row['deputy_id']}</code>" if row["deputy_id"] else "—"
+def card_text(lang: str, row, config: Config, db: Database) -> str:
+    deputy = display_user(db, int(row["deputy_id"])) if row["deputy_id"] else "—"
     return t(
         lang,
         "clan_card",
         name=row["name"],
-        owner=row["owner_id"],
+        owner=display_user(db, int(row["owner_id"])),
         deputy=deputy,
         treasury=int(row["treasury"]),
         members=int(row["members"]),
@@ -148,7 +149,7 @@ async def my_clan(call: CallbackQuery, db: Database, clans: ClanService, config:
     if not clan:
         await call.answer(t(lang, "clan_none"), show_alert=True); return
     card = clans.card(int(clan["clan_id"]))
-    await call.message.answer(card_text(lang, card, config), reply_markup=clan_card_keyboard(int(card["clan_id"]), lang, can_join=False))
+    await call.message.answer(card_text(lang, card, config, db), reply_markup=clan_card_keyboard(int(card["clan_id"]), lang, can_join=False))
     await call.answer()
 
 
@@ -186,7 +187,7 @@ async def clan_card(call: CallbackQuery, db: Database, clans: ClanService, confi
     if not row:
         await call.answer(t(lang, "clan_not_found"), show_alert=True); return
     can_join = clans.user_clan(call.from_user.id) is None
-    await call.message.edit_text(card_text(lang, row, config), reply_markup=clan_card_keyboard(clan_id, lang, can_join=can_join))
+    await call.message.edit_text(card_text(lang, row, config, db), reply_markup=clan_card_keyboard(clan_id, lang, can_join=can_join))
     await call.answer()
 
 
