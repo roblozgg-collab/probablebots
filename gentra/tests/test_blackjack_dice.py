@@ -1,18 +1,38 @@
 import pytest
 
-from app.services.blackjack import BlackjackService
+from app.services.blackjack import BlackjackFinished, BlackjackNotYours, BlackjackService
 from app.services.dice import DiceGameFinished, DiceService
 
 
-def test_blackjack_regular_win(env):
+def test_blackjack_stand_regular_win(env):
     cfg, db, economy = env
     game = BlackjackService(db, cfg, economy)
     game._deck = lambda: ["7♦", "10♥", "9♣", "Q♠"]
-    result = game.play(1, 100, 100, "bj:1")
+    row = game.start(1, 100, 100, "bj:1")
+    assert row["status"] == "active"
+    assert row["player_value"] == 19
+    assert economy.balance(1).gentra == 900
+    result = game.stand(row["game_id"], 1, "bj:1:stand")
     assert result["result"] == "win"
     assert result["player_value"] == 19
     assert result["dealer_value"] == 17
     assert result["payout"] == 150
+    assert economy.balance(1).gentra == 1050
+    with pytest.raises(BlackjackFinished):
+        game.stand(row["game_id"], 1, "bj:1:again")
+
+
+def test_blackjack_hit_to_twenty_one(env):
+    cfg, db, economy = env
+    game = BlackjackService(db, cfg, economy)
+    game._deck = lambda: ["2♦", "2♣", "5♦", "7♥", "9♣", "6♠", "10♦"]
+    row = game.start(1, 100, 100, "bj:hit")
+    assert row["player_value"] == 16
+    result = game.hit(row["game_id"], 1, "bj:hit:1")
+    assert result["status"] == "settled"
+    assert result["player_value"] == 21
+    assert result["dealer_value"] == 18
+    assert result["result"] == "win"
     assert economy.balance(1).gentra == 1050
 
 
@@ -20,10 +40,21 @@ def test_blackjack_natural(env):
     cfg, db, economy = env
     game = BlackjackService(db, cfg, economy)
     game._deck = lambda: ["8♦", "9♥", "K♣", "A♠"]
-    result = game.play(1, 100, 100, "bj:2")
+    result = game.start(1, 100, 100, "bj:2")
+    assert result["status"] == "settled"
     assert result["result"] == "blackjack"
     assert result["payout"] == 200
     assert economy.balance(1).gentra == 1100
+
+
+def test_blackjack_buttons_are_owner_only(env):
+    cfg, db, economy = env
+    game = BlackjackService(db, cfg, economy)
+    game._deck = lambda: ["2♦", "2♣", "5♦", "7♥", "9♣", "6♠", "10♦"]
+    row = game.start(1, 100, 100, "bj:owner")
+    with pytest.raises(BlackjackNotYours):
+        game.hit(row["game_id"], 2, "bj:foreign")
+    assert economy.balance(1).gentra == 900
 
 
 def test_dice_high_settles_once(env):
