@@ -146,6 +146,36 @@ CREATE TABLE IF NOT EXISTS joker_games (
     updated_at TEXT NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS blackjack_games (
+    game_id TEXT PRIMARY KEY,
+    user_id INTEGER NOT NULL,
+    chat_id INTEGER NOT NULL,
+    bet INTEGER NOT NULL,
+    player_cards_json TEXT NOT NULL,
+    dealer_cards_json TEXT NOT NULL,
+    player_value INTEGER NOT NULL,
+    dealer_value INTEGER NOT NULL,
+    result TEXT NOT NULL,
+    payout INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_blackjack_user ON blackjack_games(user_id, created_at DESC);
+
+CREATE TABLE IF NOT EXISTS dice_games (
+    game_id TEXT PRIMARY KEY,
+    start_event_key TEXT NOT NULL UNIQUE,
+    user_id INTEGER NOT NULL,
+    chat_id INTEGER NOT NULL,
+    bet INTEGER NOT NULL,
+    choice TEXT NOT NULL,
+    status TEXT NOT NULL,
+    result INTEGER,
+    payout INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_dice_user ON dice_games(user_id, created_at DESC);
+
 CREATE TABLE IF NOT EXISTS duels (
     duel_id TEXT PRIMARY KEY,
     chat_id INTEGER NOT NULL,
@@ -382,6 +412,13 @@ class Database:
     def get_user(self, user_id: int):
         with self.connect() as con:
             return con.execute("SELECT * FROM users WHERE user_id=?", (user_id,)).fetchone()
+
+    def get_user_by_username(self, username: str):
+        value = username.strip().lstrip("@").casefold()
+        if not value:
+            return None
+        with self.connect() as con:
+            return con.execute("SELECT * FROM users WHERE username=? COLLATE NOCASE", (value,)).fetchone()
 
     def get_user_language(self, user_id: int) -> str:
         row = self.get_user(user_id)
