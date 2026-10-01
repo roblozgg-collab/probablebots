@@ -6,6 +6,7 @@ from aiogram import Bot, F, Router
 from aiogram.filters import Command, CommandStart
 from aiogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup, Message
 
+from app.command_aliases import is_history_text, is_lang_text, is_profile_text, is_top_text
 from app.config import Config
 from app.db import Database
 from app.i18n import LANGS, STAT_NAMES, all_texts, t
@@ -19,6 +20,8 @@ from app.services.economy import (
     SelfTransfer,
     UserNotFound,
 )
+
+from app.users import display_row, display_user
 
 router = Router(name="common")
 
@@ -72,7 +75,12 @@ async def language_button(message: Message, db: Database):
     await message.answer("🌐 Language / Мова / Язык", reply_markup=language_keyboard())
 
 
+def _is_lang_trigger(message: Message) -> bool:
+    return is_lang_text(message.text)
+
+
 @router.message(Command("lang"))
+@router.message(_is_lang_trigger)
 async def lang_command(message: Message, db: Database, bot: Bot, config: Config):
     parts = (message.text or "").split()
     if len(parts) != 2 or parts[1].lower() not in LANGS:
@@ -118,7 +126,7 @@ async def balance(message: Message, db: Database, economy: EconomyService):
 
 def _is_profile_trigger(message: Message) -> bool:
     text = (message.text or "").strip()
-    return text in all_texts("profile") or text.lower().startswith("/профиль")
+    return text in all_texts("profile") or is_profile_text(text)
 
 
 @router.message(Command("profile"))
@@ -141,7 +149,7 @@ async def profile(message: Message, db: Database):
         t(
             lang,
             "profile_text",
-            user_id=row["user_id"],
+            user=display_user(db, int(row["user_id"])),
             gentra=int(row["gentra"]),
             galleons=int(row["galleons"]),
             stats=stats,
@@ -188,8 +196,12 @@ async def stat_upgrade(call: CallbackQuery, db: Database, economy: EconomyServic
     await call.answer(t(lang, "stat_upgraded", name=STAT_NAMES[lang][stat], level=level, cost=cost))
 
 
+def _is_history_trigger(message: Message) -> bool:
+    return is_history_text(message.text)
+
+
 @router.message(Command("history"))
-@router.message(lambda m: bool(m.text and m.text.strip().lower().startswith("/история")))
+@router.message(_is_history_trigger)
 async def history(message: Message, db: Database, economy: EconomyService, duels: DuelService):
     lang = lang_for_message(message, db)
     ops = economy.recent_operations(message.from_user.id, 10)
@@ -207,13 +219,18 @@ async def history(message: Message, db: Database, economy: EconomyService, duels
         lines.append("\n" + t(lang, "history_duels"))
         for d in duel_rows:
             if d["status"] == "resolved":
-                lines.append(f"• {d['challenger_id']} vs {d['opponent_id']} → {d['winner_id']}")
+                lines.append(f"• {display_user(db, int(d['challenger_id']))} vs {display_user(db, int(d['opponent_id']))} → {display_user(db, int(d['winner_id']))}")
             else:
-                lines.append(f"• {d['challenger_id']} vs {d['opponent_id']} → {d['status']}")
+                lines.append(f"• {display_user(db, int(d['challenger_id']))} vs {display_user(db, int(d['opponent_id']))} → {d['status']}")
     await message.answer("\n".join(lines))
 
 
+def _is_top_trigger(message: Message) -> bool:
+    return is_top_text(message.text)
+
+
 @router.message(Command("top"))
+@router.message(_is_top_trigger)
 async def top(message: Message, db: Database, economy: EconomyService):
     lang = lang_for_message(message, db)
     parts = (message.text or "").split()
@@ -224,8 +241,7 @@ async def top(message: Message, db: Database, economy: EconomyService):
     rows = economy.leaderboard(limit)
     lines = [t(lang, "top_title")]
     for i, row in enumerate(rows, start=1):
-        name = row["username"] and f"@{row['username']}" or row["first_name"] or str(row["user_id"])
-        lines.append(f"{i}. {name} — <b>{int(row['gentra']):,}</b>")
+        lines.append(f"{i}. {display_row(row)} — <b>{int(row['gentra']):,}</b>")
     await message.answer("\n".join(lines))
 
 
@@ -234,26 +250,39 @@ def parse_transfer(message: Message):
     parts = text.split()
     if not parts or parts[0].lower() not in {"п", "p"}:
         return None
-    if message.reply_to_message and len(parts) == 2:
+    if message.reply_to_message and message.reply_to_message.from_user and len(parts) == 2:
         try:
-            return int(message.reply_to_message.from_user.id), int(parts[1])
-        except (TypeError, ValueError):
+            return message.reply_to_message.from_user.id, int(parts[1].replace("_", ""))
+        except ValueError:
             return None
     if len(parts) == 3:
         try:
-            return int(parts[1]), int(parts[2])
+            return parts[1], int(parts[2].replace("_", ""))
         except ValueError:
             return None
     return None
 
 
+def resolve_transfer_target(db: Database, target):
+    if isinstance(target, int):
+        return target
+    value = str(target).strip()
+    if value.lstrip("-").isdigit():
+        return int(value)
+    row = db.get_user_by_username(value)
+    return int(row["user_id"]) if row else None
+
+
 @router.message(lambda m: bool(parse_transfer(m)))
 async def transfer(message: Message, db: Database, economy: EconomyService):
     lang = lang_for_message(message, db)
-    target, amount = parse_transfer(message)
+    target_ref, amount = parse_transfer(message)
     if message.reply_to_message and message.reply_to_message.from_user:
         u = message.reply_to_message.from_user
         db.ensure_user(u.id, u.username, u.first_name)
+    target = resolve_transfer_target(db, target_ref)
+    if target is None:
+        await message.answer(t(lang, "user_missing")); return
     try:
         economy.transfer(message.from_user.id, target, amount, f"msg:{message.chat.id}:{message.message_id}:transfer")
     except InvalidAmount:
@@ -266,7 +295,7 @@ async def transfer(message: Message, db: Database, economy: EconomyService):
         await message.answer(t(lang, "user_missing")); return
     except DuplicateEvent:
         return
-    await message.answer(t(lang, "transfer_ok", amount=amount, target=target))
+    await message.answer(t(lang, "transfer_ok", amount=amount, target=display_user(db, target)))
 
 
 @router.message(lambda m: bool(m.text and m.text.strip() in all_texts("games")))
