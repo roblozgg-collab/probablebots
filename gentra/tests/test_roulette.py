@@ -30,3 +30,17 @@ def test_recent_results_are_per_chat_and_newest_first(env):
     assert color_of(21) == "red"
     assert color_of(26) == "black"
     assert color_of(0) == "green"
+
+
+def test_force_close_settles_without_waiting(env):
+    cfg, db, economy = env
+    roulette = RouletteService(db, cfg, economy)
+    spec = parse_bet_target("красное")
+    row = roulette.place_bet(100, 1, 100, spec, "roulette:go:bet")
+    assert economy.balance(1).gentra == 900
+    round_id = roulette.force_close(100)
+    assert round_id == int(row["id"])
+    result = roulette.settle_round(round_id, forced_number=1)
+    assert result["number"] == 1
+    assert economy.balance(1).gentra == 1100
+    assert roulette.settle_round(round_id, forced_number=1) is None
