@@ -145,6 +145,7 @@ Accepted target formats:
 - `100 even`
 - round commands: `bets/ставки`, `cancel/отменить`, `double/удвоить`, `repeat/повторить`
 - result log: `лог` / `log` / `/log` shows the latest settled roulette numbers for the current chat only
+- `го` / `go` closes the current round immediately and settles it without waiting for the timer
 
 **gentra rules for unknown original settings:**
 
@@ -302,6 +303,6 @@ The test suite covers:
 
 Player-facing references use `@username` when it is available. If a Telegram account has no username, gentra shows the saved first name instead of exposing the numeric Telegram ID. Transfers also accept `п @username сумма` / `p @username amount` in addition to reply transfers and numeric IDs.
 
-Blackjack commands do not require punctuation: `бд 100`, `блекджек 100`, `bj 100`, `blackjack 100`. The game is automatic: both sides receive cards, the player and dealer draw to the configured stand values, and the result is settled in one database transaction. Default total payouts are x1 on a push, x1.5 on a normal win and x2 on a natural blackjack.
+Blackjack commands do not require punctuation: `бд 100`, `блекджек 100`, `bj 100`, `blackjack 100`. After the initial deal the bot shows inline buttons for Hit and Stand. Only the player who created the game can use them. The dealer keeps one card hidden until settlement and draws to the configured dealer stand value after the player stands or reaches 21. Default total payouts are x1 on a push, x1.5 on a normal win and x2 on a natural blackjack. Active state and the remaining deck are stored in SQLite so callbacks keep working after a restart.
 
 Dice uses Telegram's native animated 🎲. `кб 100` / `kb 100` bets on 4–6, while `км 100` / `km 100` bets on 1–3. `куб больше 100`, `куб меньше 100`, `dice high 100` and `dice low 100` are also accepted. The bet is debited before the roll and the result is settled once after the Telegram dice value is returned. The default total win payout is x2.
